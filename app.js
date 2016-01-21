@@ -17,8 +17,6 @@ var server = app.listen(port, function() {
 
 var io = require('socket.io').listen(server);
 
-io.sockets.on('socket.io').listen(server);
-
-io.sockets.kn('connection', function(socket) {
+io.sockets.on('connection', function(socket) {
 	socket.emit('connected');
 })
