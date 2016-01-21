@@ -17,6 +17,17 @@ var server = app.listen(port, function() {
 
 var io = require('socket.io').listen(server);
 
+var messages = [];
+
 io.sockets.on('connection', function(socket) {
-	socket.emit('connected');
+	// when making connection, emit  get all message to get all messages, save messages into messages array
+	socket.on('getAllMessages', function() {
+		socket.emit('allMessages', messages);
+	});
+
+	socket.on('createMessage', function(message) {
+		messages.push(message);
+		io.sockets.emit('messageAdded', message);
+	});
+	
 })
