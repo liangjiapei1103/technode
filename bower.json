@@ -1,0 +1,24 @@
+{
+  "name": "technode",
+  "description": "",
+  "main": "index.js",
+  "authors": [
+    "liangjiapei1103 <liang98@purdue.edu>"
+  ],
+  "license": "ISC",
+  "homepage": "https://github.com/liangjiapei1103/technode",
+  "moduleType": [
+    "node"
+  ],
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ],
+  "dependencies": {
+    "bootstrap": "~3.3.6",
+    "angular": "~1.4.8"
+  }
+}
