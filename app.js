@@ -1,6 +1,25 @@
 var express = require('express')
 var app = express()
 var path = require('path')
+var bodyParser = require('body-parser')
+var cookieParser = require('cookie-parser')
+var session = require('express-session')
+var Controller = require('./controllers')
+
+app.use(bodyParser.json())
+app.use(bodyParser.urlencoded({
+	extended: true
+}))
+app.use(cookieParser())
+app.use(session({
+	secret: 'technode',
+	resave: true,
+	saveUninitialized: false,
+	cookie: {
+		maxAge: 60 * 1000
+	}
+}))
+
 
 var port = process.env.PORT || 3000
 
@@ -29,4 +48,44 @@ io.sockets.on('connection', function(socket) {
 		messages.push(message);
 		io.sockets.emit('messages.add', message)
 	})
+})
+
+app.get('/api/validate', function (req, res) {
+	var userId = req.session._userOd
+	if (_userId) {
+		Controllers.User.findUserById(_userId, function(err, res) {
+			if (err) {
+				res.json(401, {
+					mas: err
+				})
+			} else {
+				res.json(user)
+			}
+		})
+	} else {
+		res.json(401, null)
+	}
+})
+
+app.get('/api/login', function(req, res) {
+	var email = req.body.email
+	if (email) {
+		Controllers.User.findByEmailOrCreate(email, function (err, user) {
+			if (err) {
+				res.json(500, {
+					msg: err
+				})
+			} else {
+				req.session._userId = user._userId
+				res.json(user)
+			}
+		})
+	} else {
+		res.join(403)
+	}
+})
+
+app.get('/api/logout', function (req, res) {
+	req.session._userId = null
+	res.join(401)
 })
