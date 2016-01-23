@@ -2,14 +2,15 @@ angular.module('techNodeApp', ['ngRoute', 'angularMoment']).
 run(function ($window, $rootScope, $http, $location) {
   $window.moment.lang('zh-cn')
   $http({
-    url: '/api/validate',
+    url: '/ajax/validate',
     method: 'GET'
   }).success(function (user) {
     $rootScope.me = user
-    $location.path('/')
+    $location.path('/rooms')
   }).error(function (data) {
     $location.path('/login')
   })
+
   $rootScope.logout = function() {
     $http({
       url: '/api/logout',
