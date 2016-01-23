@@ -190,4 +190,29 @@ io.sockets.on('connection', function(socket) {
       }
     })
   })
+
+  socket.on('createRoom', function(room) {
+    Controllers.Room.create(room, function(err, room) {
+      if (err) {
+        socket.emit('err', {
+          msg: err
+        })
+      } else {
+        io.sockets.emit('roomAdded', room)
+      }
+    })
+  })
+
+  socket.on('getAllRooms', function() {
+    Controllers.Room.read(function (err, rooms) {
+      if (err) {
+        socket.emit('err', {
+          msg: err
+        })
+      } else {
+        socket.emit('roomsData', rooms)
+      }
+    })
+  })
+
 })
