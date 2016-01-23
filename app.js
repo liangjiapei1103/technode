@@ -215,4 +215,23 @@ io.sockets.on('connection', function(socket) {
     })
   })
 
+  socket.on('joinRoom', function(join) {
+    Controllers.User.joinRoom(join, function(err) {
+      if (err) {
+        socket.emit('err', {
+          msg: err
+        })
+      } else {
+        socket.join(join.room._id)
+        socket.emit('joinRoom' + join.user._id, join)
+        socket.in(join,room._id).broadcast.emit('messageAdded', {
+          content: join.user.name + 'join the room',
+          creator: SYSTEM,
+          createAt: new Date(),
+          _id: ObjectId()
+        })
+        socket.in(join.room._id).broadcast.emit('joinRoom', join)
+      }
+    })
+  })
 })
