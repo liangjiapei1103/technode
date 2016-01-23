@@ -1,7 +1,7 @@
 angular.module('techNodeApp', ['ngRoute']).run(function($window, $rootScope, $http, $location) {
 	$http({
 		// use Ajax to validate user's info
-		url: '/api/validate',
+		url: '/ajax/validate',
 		method: 'GET'
 		// if success, go to chatting page
 	}).success(function(user) {
