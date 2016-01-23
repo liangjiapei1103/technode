@@ -5,6 +5,12 @@ var bodyParser = require('body-parser')
 var cookieParser = require('cookie-parser')
 var session = require('express-session')
 var Controller = require('./controllers')
+var signedCookieParser = cookieParser('technode')
+var MongoStore = require('connect-mongo')(session)
+var sessionStore = new MongoStore({
+	url : 'mongodb://localhost/technode'
+})
+
 
 app.use(bodyParser.json())
 app.use(bodyParser.urlencoded({
@@ -16,7 +22,7 @@ app.use(session({
 	resave: true,
 	saveUninitialized: false,
 	cookie: {
-		maxAge: 60 * 1000
+		maxAge: 60 * 1000 * 60
 	}
 }))
 
@@ -34,7 +40,7 @@ var server = app.listen(port, function() {
 	console.log('Technode is on port ' + port + '!')
 })
 
-var io = require('socket.io').listen(server)
+var io = require('socket.io').listen(server)     z                                   
 
 var messages = []
 
@@ -50,8 +56,29 @@ io.sockets.on('connection', function(socket) {
 	})
 })
 
+io.set('authorization', function (handshakeData, accept) {
+	signedCookieParser(handShakeData, {}, function(err) {
+		if (err) {
+			accept(err, false)
+		} else {
+			sessionStore.get(handshakeData.signedCookie['connect.sid'], function(err, session) {
+				if (err) {
+					accept(err, false)
+				} else {
+					handshakeData.session = session
+					if (session._userId) {
+						accept(null, true)
+					} else {
+						accept('No login')
+					}
+				}
+			}
+		}
+	})
+})
+
 app.get('/api/validate', function (req, res) {
-	var userId = req.session._userOd
+	var userId = req.session._userId
 	if (_userId) {
 		Controllers.User.findUserById(_userId, function(err, res) {
 			if (err) {
