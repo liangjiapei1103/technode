@@ -203,16 +203,28 @@ io.sockets.on('connection', function(socket) {
     })
   })
 
-  socket.on('getAllRooms', function() {
-    Controllers.Room.read(function (err, rooms) {
-      if (err) {
-        socket.emit('err', {
-          msg: err
-        })
-      } else {
-        socket.emit('roomsData', rooms)
-      }
-    })
+  socket.on('getAllRooms', function(data) {
+    if (data && data._roomId) {
+      Controllers.Room.getById(data._roomId, function (err, room) {
+        if (err) {
+          socket.emit('err', {
+            msg: err
+          })
+        } else {
+          socket.emit('roomsData.' + data._roomI, room)
+        }
+      })
+    } else {
+      Controllers.Room.read(function (err, rooms) {
+        if (err) {
+          socket.emit('err', {
+            msg: err
+          })
+        } else {
+          socket.emit('roomsData', rooms)
+        }
+      })
+    }
   })
 
   socket.on('joinRoom', function(join) {
@@ -223,7 +235,7 @@ io.sockets.on('connection', function(socket) {
         })
       } else {
         socket.join(join.room._id)
-        socket.emit('joinRoom' + join.user._id, join)
+        socket.emit('joinRoom.' + join.user._id, join)
         socket.in(join,room._id).broadcast.emit('messageAdded', {
           content: join.user.name + 'join the room',
           creator: SYSTEM,
