@@ -1,9 +1,11 @@
 angular.module('techNodeApp').config(function($routeProvider, $locationProvider) {
   $locationProvider.html5Mode(true);
-  $routeProvider.when('/rooms', {
+  $routeProvider.
+  when('/rooms', {
     templateUrl: '/pages/rooms.html',
     controller: 'RoomsCtrl'
-  }).when('/rooms/:_roomId', {
+  }).
+  when('/rooms/:_roomId', {
     templateUrl: '/pages/room.html',
     controller: 'RoomCtrl'
   }).

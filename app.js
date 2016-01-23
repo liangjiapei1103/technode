@@ -9,9 +9,10 @@ var port = process.env.PORT || 3000
 var Controllers = require('./controllers')
 var signedCookieParser = cookieParser('technode')
 var MongoStore = require('connect-mongo')(session)
+var ObjectId = require('mongoose').Schema.ObjectId
 
 var sessionStore = new MongoStore({
-  url: 'mongodb://localhost/technode'
+  url: 'mongodb://localhost/technodechapter02'
 })
 
 app.use(bodyParser.json())
@@ -24,14 +25,14 @@ app.use(session({
   resave: true,
   saveUninitialized: false,
   cookie: {
-    maxAge: 60 * 1000
+    maxAge: 60 * 1000 * 60
   },
   store: sessionStore
 }))
 
 app.use(express.static(path.join(__dirname, '/static')))
 
-app.get('/api/validate', function(req, res) {
+app.get('/ajax/validate', function(req, res) {
   var _userId = req.session._userId
   if (_userId) {
     Controllers.User.findUserById(_userId, function(err, user) {
@@ -48,8 +49,8 @@ app.get('/api/validate', function(req, res) {
   }
 })
 
-app.post('/api/login', function(req, res) {
-  var email = req.body.email
+app.post('/ajax/login', function(req, res) {
+  email = req.body.email
   if (email) {
     Controllers.User.findByEmailOrCreate(email, function(err, user) {
       if (err) {
@@ -74,7 +75,7 @@ app.post('/api/login', function(req, res) {
   }
 })
 
-app.get('/api/logout', function(req, res) {
+app.get('/ajax/logout', function(req, res) {
   var _userId = req.session._userId
   Controllers.User.offline(_userId, function(err, user) {
     if (err) {
@@ -83,7 +84,7 @@ app.get('/api/logout', function(req, res) {
       })
     } else {
       res.json(200)
-      delete req.session._userId
+      delete req.session.destroy()
     }
   })
 })
@@ -132,12 +133,17 @@ io.sockets.on('connection', function(socket) {
         mesg: err
       })
     } else {
-      socket.broadcast.emit('users.add', user)
-      socket.broadcast.emit('messages.add', {
-        content: user.name + '进入了聊天室',
-        creator: SYSTEM,
-        createAt: new Date()
-      })
+      if (user._roomId) {
+        socket.join(user._roomId)
+        socket.in(user._roomId).broadcast.emit('users.join', user)
+        socket.in(user._roomId).broadcast.emit('messages.add', {
+          content: user.name + '进入了聊天室',
+          creator: SYSTEM,
+          createAt: new Date(),
+          _id: ObjectId()
+        })
+      }
+
     }
   })
   socket.on('disconnect', function() {
@@ -147,37 +153,21 @@ io.sockets.on('connection', function(socket) {
           mesg: err
         })
       } else {
-        socket.broadcast.emit('users.remove', user)
-        socket.broadcast.emit('messages.add', {
-          content: user.name + '离开了聊天室',
-          creator: SYSTEM,
-          createAt: new Date()
-        })
+        if (user._roomId) {
+          socket.in(user._roomId).broadcast.emit('users.leave', user)
+          socket.in(user._roomId).broadcast.emit('messages.add', {
+            content: user.name + '离开了聊天室',
+            creator: SYSTEM,
+            createAt: new Date(),
+            _id: ObjectId()
+          })
+          Controllers.User.leaveRoom({
+            user: user
+          }, function() {})
+        }
+
       }
     })
-  });
-  socket.on('technode.read', function() {
-    async.parallel([
-
-        function(done) {
-          Controllers.User.getOnlineUsers(done)
-        },
-        function(done) {
-          Controllers.Message.read(done)
-        }
-      ],
-      function(err, results) {
-        if (err) {
-          socket.emit('err', {
-            msg: err
-          })
-        } else {
-          socket.emit('technode.read', {
-            users: results[0],
-            messages: results[1]
-          })
-        }
-      });
   })
   socket.on('messages.create', function(message) {
     Controllers.Message.create(message, function(err, message) {
@@ -186,48 +176,51 @@ io.sockets.on('connection', function(socket) {
           msg: err
         })
       } else {
-        io.sockets.emit('messages.add', message)
+        socket.in(message._roomId).broadcast.emit('messages.add', message)
+        socket.emit('messages.add', message)
       }
     })
   })
 
-  socket.on('createRoom', function(room) {
+  socket.on('rooms.create', function(room) {
     Controllers.Room.create(room, function(err, room) {
       if (err) {
         socket.emit('err', {
           msg: err
         })
       } else {
-        io.sockets.emit('roomAdded', room)
+        room = room.toObject()
+        room.users = []
+        io.sockets.emit('rooms.add', room)
       }
     })
   })
 
-  socket.on('getAllRooms', function(data) {
+  socket.on('rooms.read', function(data) {
     if (data && data._roomId) {
-      Controllers.Room.getById(data._roomId, function (err, room) {
+      Controllers.Room.getById(data._roomId, function(err, room) {
         if (err) {
           socket.emit('err', {
             msg: err
           })
         } else {
-          socket.emit('roomsData.' + data._roomI, room)
+          socket.emit('rooms.read.' + data._roomId, room)
         }
       })
     } else {
-      Controllers.Room.read(function (err, rooms) {
+      Controllers.Room.read(function(err, rooms) {
         if (err) {
           socket.emit('err', {
             msg: err
           })
         } else {
-          socket.emit('roomsData', rooms)
+          socket.emit('rooms.read', rooms)
         }
       })
     }
   })
 
-  socket.on('joinRoom', function(join) {
+  socket.on('users.join', function(join) {
     Controllers.User.joinRoom(join, function(err) {
       if (err) {
         socket.emit('err', {
@@ -235,14 +228,33 @@ io.sockets.on('connection', function(socket) {
         })
       } else {
         socket.join(join.room._id)
-        socket.emit('joinRoom.' + join.user._id, join)
-        socket.in(join,room._id).broadcast.emit('messageAdded', {
-          content: join.user.name + 'join the room',
+        socket.emit('users.join.' + join.user._id, join)
+        socket.in(join.room._id).broadcast.emit('messages.add', {
+          content: join.user.name + '进入了聊天室',
           creator: SYSTEM,
           createAt: new Date(),
           _id: ObjectId()
         })
-        socket.in(join.room._id).broadcast.emit('joinRoom', join)
+        socket.in(join.room._id).broadcast.emit('users.join', join)
+      }
+    })
+  })
+
+  socket.on('users.leave', function(leave) {
+    Controllers.User.leaveRoom(leave, function(err) {
+      if (err) {
+        socket.emit('err', {
+          msg: err
+        })
+      } else {
+        socket.in(leave.room._id).broadcast.emit('messages.add', {
+          content: leave.user.name + '离开了聊天室',
+          creator: SYSTEM,
+          createAt: new Date(),
+          _id: ObjectId()
+        })
+        socket.leave(leave.room._id)
+        io.sockets.emit('users.leave', leave)
       }
     })
   })
