@@ -13,6 +13,8 @@ var ObjectId = require('mongoose').Schema.ObjectId
 
 var sessionStore = new MongoStore({
   url: 'mongodb://admin:abc123@ds051595.mongolab.com:51595/jiapei-technode'
+}, function () {
+  console.log('Connected to mongolab database!');
 })
 
 app.use(bodyParser.json())
