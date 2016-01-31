@@ -12,7 +12,7 @@ var MongoStore = require('connect-mongo')(session)
 var ObjectId = require('mongoose').Schema.ObjectId
 
 var sessionStore = new MongoStore({
-  url: 'mongodb://localhost/technodechapter02'
+  url: 'mongodb://admin:abc123@ds051595.mongolab.com:51595/jiapei-technode'
 })
 
 app.use(bodyParser.json())
