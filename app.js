@@ -33,11 +33,11 @@ app.use(session({
   store: sessionStore
 }))
 
-if ('development' == app.get('env')) {
-  app.set('staticPath', '/static')
-} else {
-  app.set('staticPath', '/build')
-}
+// if ('development' == app.get('env')) {
+app.set('staticPath', '/static')
+// } else {
+//   app.set('staticPath', '/build')
+// }
 
 app.use(express.static(__dirname + app.get('staticPath')))
 
